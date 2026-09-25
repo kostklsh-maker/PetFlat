@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { DialogHost } from '../components/DialogHost';
 import { colors } from '../components/theme';
 import { serviceById } from '../data/catalog';
 import { useT } from '../i18n';
@@ -57,6 +58,7 @@ export default function RootLayout() {
       <AppStoreProvider>
         <StatusBar style="dark" />
         <RootStack />
+        <DialogHost />
       </AppStoreProvider>
     </SafeAreaProvider>
   );
