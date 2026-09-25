@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Alert, Pressable, Text } from 'react-native';
-import { daysUntil, formatDate, isIsoDate, rub } from '../../components/format';
+import { daysUntil, parseDateInput, weekday } from '../../components/format';
 import { PetPicker, useSelectedPet } from '../../components/PetPicker';
 import { PlanGate } from '../../components/PlanGate';
 import { colors, radius, spacing } from '../../components/theme';
 import { Button, Card, Field, H2, ListItem, Muted, Row, Screen } from '../../components/ui';
 import { GROOMING_SALONS } from '../../data/catalog';
+import { useT } from '../../i18n';
 import { useStore } from '../../store/AppStore';
 
 export default function GroomingScreen() {
@@ -16,13 +17,14 @@ export default function GroomingScreen() {
   );
 }
 
-const TIMES = ['10:00', '12:00', '14:00', '16:00', '18:00'];
+const TIMES = ['09:00', '11:00', '13:00', '15:00', '17:00'];
 
 function Grooming() {
   const [pet, selectPet] = useSelectedPet();
   const { state, addBooking, cancelBooking } = useStore();
+  const { t, tr, price, join, date: fmtDate } = useT();
   const [salonId, setSalonId] = useState<string>();
-  const [service, setService] = useState<string>();
+  const [serviceId, setServiceId] = useState<string>();
   const [date, setDate] = useState('');
   const [time, setTime] = useState(TIMES[0]);
 
@@ -32,44 +34,50 @@ function Grooming() {
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
   const book = () => {
-    if (!pet || !salon || !service) return;
-    if (!isIsoDate(date) || daysUntil(date) < 0) {
-      Alert.alert('Дата', 'Укажите будущую дату в формате ГГГГ-ММ-ДД.');
+    if (!pet || !salon || !serviceId) return;
+    const iso = parseDateInput(date);
+    if (!iso || daysUntil(iso) < 0) {
+      Alert.alert(t('common.date'), t('grooming.futureDate'));
+      return;
+    }
+    if (salon.closedDays.includes(weekday(iso))) {
+      Alert.alert(t('common.date'), t('grooming.closedDay'));
       return;
     }
     // TODO: send the booking to the salon's system via the PetFlat backend.
-    addBooking({ petId: pet.id, salonId: salon.id, service, date, time });
+    addBooking({ petId: pet.id, salonId: salon.id, serviceId, date: iso, time });
     setSalonId(undefined);
-    setService(undefined);
+    setServiceId(undefined);
     setDate('');
-    Alert.alert('Готово', `${pet.name} записан(а) в «${salon.name}» на ${formatDate(date)}, ${time}.`);
+    Alert.alert(t('common.done'), t('grooming.booked', { pet: pet.name, salon: tr(salon.name), date: fmtDate(iso), time }));
   };
 
   return (
     <Screen>
       {bookings.length > 0 && (
         <>
-          <H2>Мои записи</H2>
+          <H2>{t('grooming.myBookings')}</H2>
           {bookings.map((b) => {
             const s = GROOMING_SALONS.find((x) => x.id === b.salonId);
+            const svc = s?.services.find((x) => x.id === b.serviceId);
             const p = state.pets.find((x) => x.id === b.petId);
             return (
               <ListItem
                 key={b.id}
                 icon="calendar"
                 color="#E76F9A"
-                title={`${formatDate(b.date)}, ${b.time} · ${p?.name ?? ''}`}
-                subtitle={`${b.service} · ${s?.name}, ${s?.address}`}
+                title={join([`${fmtDate(b.date)}, ${b.time}`, p?.name])}
+                subtitle={join([svc && tr(svc.name), s && `${tr(s.name)}, ${tr(s.address)}`])}
                 right={
                   <Pressable
                     onPress={() =>
-                      Alert.alert('Отменить запись?', undefined, [
-                        { text: 'Нет', style: 'cancel' },
-                        { text: 'Отменить', style: 'destructive', onPress: () => cancelBooking(b.id) },
+                      Alert.alert(t('grooming.cancelTitle'), undefined, [
+                        { text: t('common.no'), style: 'cancel' },
+                        { text: t('grooming.cancel'), style: 'destructive', onPress: () => cancelBooking(b.id) },
                       ])
                     }
                   >
-                    <Text style={{ color: colors.danger }}>Отменить</Text>
+                    <Text style={{ color: colors.danger }}>{t('grooming.cancel')}</Text>
                   </Pressable>
                 }
               />
@@ -78,7 +86,7 @@ function Grooming() {
         </>
       )}
 
-      <H2>Новая запись</H2>
+      <H2>{t('grooming.new')}</H2>
       <PetPicker value={pet} onChange={selectPet} />
       {pet &&
         GROOMING_SALONS.map((s) => (
@@ -86,53 +94,59 @@ function Grooming() {
             key={s.id}
             icon="cut"
             color={s.id === salonId ? colors.primary : '#E76F9A'}
-            title={`${s.name} · ★ ${s.rating}`}
-            subtitle={s.address}
+            title={join([tr(s.name), `★ ${s.rating}`])}
+            subtitle={tr(s.address)}
             onPress={() => {
               setSalonId(s.id);
-              setService(undefined);
+              setServiceId(undefined);
             }}
           />
         ))}
 
       {pet && salon && (
         <Card>
-          <Muted>Услуга в «{salon.name}»</Muted>
+          <Muted>{t('grooming.serviceIn', { salon: tr(salon.name) })}</Muted>
           {salon.services.map((svc) => (
             <Pressable
-              key={svc.name}
-              onPress={() => setService(svc.name)}
+              key={svc.id}
+              onPress={() => setServiceId(svc.id)}
               style={{
                 padding: spacing(3),
                 borderRadius: radius.md,
                 borderWidth: 1,
-                borderColor: service === svc.name ? colors.primary : colors.border,
+                borderColor: serviceId === svc.id ? colors.primary : colors.border,
               }}
             >
               <Row style={{ justifyContent: 'space-between' }}>
-                <Text style={{ color: colors.text }}>{svc.name}</Text>
-                <Text style={{ color: colors.muted }}>{rub(svc.price)}</Text>
+                <Text style={{ color: colors.text }}>{tr(svc.name)}</Text>
+                <Text style={{ color: colors.muted }}>{price(svc.price)}</Text>
               </Row>
             </Pressable>
           ))}
-          <Field label="Дата (ГГГГ-ММ-ДД)" value={date} onChangeText={setDate} placeholder="2026-10-01" />
+          <Field
+            label={t('common.dateLabel')}
+            value={date}
+            onChangeText={setDate}
+            placeholder={t('common.datePh')}
+            keyboardType="numbers-and-punctuation"
+          />
           <Row style={{ flexWrap: 'wrap', gap: spacing(2) }}>
-            {TIMES.map((t) => (
+            {TIMES.map((slot) => (
               <Pressable
-                key={t}
-                onPress={() => setTime(t)}
+                key={slot}
+                onPress={() => setTime(slot)}
                 style={{
                   paddingHorizontal: spacing(3),
                   paddingVertical: spacing(2),
                   borderRadius: radius.sm,
-                  backgroundColor: t === time ? colors.primary : colors.bg,
+                  backgroundColor: slot === time ? colors.primary : colors.bg,
                 }}
               >
-                <Text style={{ color: t === time ? '#fff' : colors.text }}>{t}</Text>
+                <Text style={{ color: slot === time ? '#fff' : colors.text }}>{slot}</Text>
               </Pressable>
             ))}
           </Row>
-          <Button title="Записаться" icon="checkmark" disabled={!service || !date} onPress={book} />
+          <Button title={t('grooming.book')} icon="checkmark" disabled={!serviceId || !date} onPress={book} />
         </Card>
       )}
     </Screen>

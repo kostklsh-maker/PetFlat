@@ -8,7 +8,16 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.petflat.app"
+      "bundleIdentifier": "com.petflat.app",
+      "infoPlist": {
+        "CFBundleLocalizations": [
+          "he",
+          "ru",
+          "en"
+        ],
+        "CFBundleDevelopmentRegion": "en",
+        "CFBundleAllowMixedLocalizations": true
+      }
     },
     "android": {
       "adaptiveIcon": {

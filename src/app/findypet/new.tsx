@@ -1,19 +1,19 @@
-import { goBack } from '../../components/nav';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { isIsoDate, todayIso } from '../../components/format';
+import { parseDateInput, todayIso, toInputDate } from '../../components/format';
+import { goBack } from '../../components/nav';
 import { Button, Field, Muted, Screen, Segmented } from '../../components/ui';
-import { SPECIES_LABEL } from '../../data/catalog';
+import { SPECIES } from '../../data/catalog';
 import type { LostFoundKind, Species } from '../../data/types';
+import { useT } from '../../i18n';
 import { usePet, useStore } from '../../store/AppStore';
-
-const SPECIES = Object.keys(SPECIES_LABEL) as Species[];
 
 export default function NewPost() {
   const params = useLocalSearchParams<{ kind?: LostFoundKind; petId?: string }>();
   const pet = usePet(params.petId);
   const { state, addPost } = useStore();
+  const { t } = useT();
 
   const [kind, setKind] = useState<LostFoundKind>(params.kind ?? 'lost');
   const [petName, setPetName] = useState(pet?.name ?? '');
@@ -21,17 +21,18 @@ export default function NewPost() {
   const [breed, setBreed] = useState(pet?.breed ?? '');
   const [color, setColor] = useState(pet?.color ?? '');
   const [description, setDescription] = useState(
-    [pet?.specialMarks, pet?.chipNumber ? `Чипирован: ${pet.chipNumber}` : ''].filter(Boolean).join('. '),
+    [pet?.specialMarks, pet?.chipNumber ? t('fyp.chipped', { chip: pet.chipNumber }) : ''].filter(Boolean).join('. '),
   );
   const [area, setArea] = useState(state.owner.city);
-  const [date, setDate] = useState(todayIso());
+  const [date, setDate] = useState(toInputDate(todayIso()));
   const [contactName, setContactName] = useState(state.owner.name);
   const [contactPhone, setContactPhone] = useState(state.owner.phone);
   const [reward, setReward] = useState('');
 
   const submit = () => {
-    if (!area.trim() || !contactPhone.trim() || !isIsoDate(date)) {
-      Alert.alert('Проверьте поля', 'Укажите место, дату (ГГГГ-ММ-ДД) и телефон для связи.');
+    const iso = parseDateInput(date);
+    if (!area.trim() || !contactPhone.trim() || !iso) {
+      Alert.alert(t('common.checkFields'), t('fyp.checkMsg'));
       return;
     }
     const r = parseInt(reward.replace(/\D/g, ''), 10);
@@ -39,11 +40,11 @@ export default function NewPost() {
       kind,
       petName: kind === 'lost' ? petName.trim() || undefined : undefined,
       species,
-      breed: breed.trim() || 'Не указана',
-      color: color.trim() || 'Не указан',
+      breed: breed.trim() || t('fyp.noBreed'),
+      color: color.trim() || t('fyp.noColor'),
       description: description.trim(),
       area: area.trim(),
-      date,
+      date: iso,
       contactName: contactName.trim(),
       contactPhone: contactPhone.trim(),
       reward: kind === 'lost' && r > 0 ? r : undefined,
@@ -55,31 +56,40 @@ export default function NewPost() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: pet ? `${pet.name} потерялся` : 'Новое объявление' }} />
+      <Stack.Screen options={{ title: pet ? t('fyp.newForPet', { name: pet.name }) : t('title.newPost') }} />
       {!pet && (
         <Segmented
           value={kind}
           onChange={setKind}
           options={[
-            { value: 'lost', label: 'Потерялся' },
-            { value: 'found', label: 'Нашёл животное' },
+            { value: 'lost', label: t('fyp.kindLost') },
+            { value: 'found', label: t('fyp.kindFound') },
           ]}
         />
       )}
-      {pet && <Muted>Данные подставлены из профиля питомца — проверьте и дополните.</Muted>}
-      {kind === 'lost' && <Field label="Кличка" value={petName} onChangeText={setPetName} />}
-      <Segmented value={species} onChange={setSpecies} options={SPECIES.map((s) => ({ value: s, label: SPECIES_LABEL[s] }))} />
-      <Field label="Порода" value={breed} onChangeText={setBreed} />
-      <Field label="Окрас" value={color} onChangeText={setColor} />
-      <Field label="Описание и приметы" value={description} onChangeText={setDescription} multiline />
-      <Field label={kind === 'lost' ? 'Где потерялся *' : 'Где найден *'} value={area} onChangeText={setArea} />
-      <Field label="Дата (ГГГГ-ММ-ДД)" value={date} onChangeText={setDate} />
-      <Field label="Контактное лицо" value={contactName} onChangeText={setContactName} />
-      <Field label="Телефон *" value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" />
-      {kind === 'lost' && (
-        <Field label="Вознаграждение, ₽" value={reward} onChangeText={setReward} keyboardType="number-pad" />
-      )}
-      <Button title="Опубликовать" icon="megaphone" onPress={submit} />
+      {pet && <Muted>{t('fyp.prefilled')}</Muted>}
+      {kind === 'lost' && <Field label={t('pet.name')} value={petName} onChangeText={setPetName} />}
+      <Segmented value={species} onChange={setSpecies} options={SPECIES.map((s) => ({ value: s, label: t(`species.${s}`) }))} />
+      <Field label={t('pet.breed')} value={breed} onChangeText={setBreed} />
+      <Field label={t('pet.color')} value={color} onChangeText={setColor} />
+      <Field label={t('fyp.desc')} value={description} onChangeText={setDescription} multiline />
+      <Field
+        label={kind === 'lost' ? t('fyp.whereLostReq') : t('fyp.whereFoundReq')}
+        value={area}
+        onChangeText={setArea}
+        placeholder={t('owner.cityPh')}
+      />
+      <Field label={t('common.dateLabel')} value={date} onChangeText={setDate} keyboardType="numbers-and-punctuation" />
+      <Field label={t('fyp.contactName')} value={contactName} onChangeText={setContactName} />
+      <Field
+        label={t('fyp.phoneReq')}
+        value={contactPhone}
+        onChangeText={setContactPhone}
+        keyboardType="phone-pad"
+        placeholder="+972 5X-XXX-XXXX"
+      />
+      {kind === 'lost' && <Field label={t('fyp.reward')} value={reward} onChangeText={setReward} keyboardType="number-pad" />}
+      <Button title={t('fyp.publish')} icon="megaphone" onPress={submit} />
     </Screen>
   );
 }

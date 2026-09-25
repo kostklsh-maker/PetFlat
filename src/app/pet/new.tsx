@@ -1,17 +1,17 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { isIsoDate } from '../../components/format';
+import { parseDateInput } from '../../components/format';
 import { Button, Field, Screen, Segmented } from '../../components/ui';
-import { SPECIES_LABEL } from '../../data/catalog';
+import { SPECIES } from '../../data/catalog';
 import { emptyHotel, emptyMedical } from '../../data/seed';
 import type { Species } from '../../data/types';
+import { useT } from '../../i18n';
 import { useStore } from '../../store/AppStore';
-
-const SPECIES = Object.keys(SPECIES_LABEL) as Species[];
 
 export default function NewPet() {
   const { addPet, canAddPet } = useStore();
+  const { t } = useT();
   const [name, setName] = useState('');
   const [species, setSpecies] = useState<Species>('dog');
   const [sex, setSex] = useState<'male' | 'female'>('male');
@@ -20,19 +20,21 @@ export default function NewPet() {
   const [color, setColor] = useState('');
   const [weight, setWeight] = useState('');
   const [chipNumber, setChipNumber] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
   const [specialMarks, setSpecialMarks] = useState('');
 
   const save = () => {
     if (!canAddPet) {
-      Alert.alert('Достигнут лимит тарифа');
+      Alert.alert(t('pet.limitReached'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('Укажите кличку');
+      Alert.alert(t('pet.enterName'));
       return;
     }
-    if (birthDate && !isIsoDate(birthDate)) {
-      Alert.alert('Дата рождения', 'Введите дату в формате ГГГГ-ММ-ДД, например 2021-05-14.');
+    const birthIso = birthDate.trim() ? parseDateInput(birthDate) : '';
+    if (birthIso === null) {
+      Alert.alert(t('pet.birthDate'), t('pet.dateErr'));
       return;
     }
     const w = parseFloat(weight.replace(',', '.'));
@@ -41,10 +43,11 @@ export default function NewPet() {
       species,
       sex,
       breed: breed.trim(),
-      birthDate,
+      birthDate: birthIso,
       color: color.trim(),
       weightKg: Number.isFinite(w) ? w : undefined,
       chipNumber: chipNumber.trim() || undefined,
+      licenseNumber: species === 'dog' ? licenseNumber.trim() || undefined : undefined,
       specialMarks: specialMarks.trim() || undefined,
       medical: emptyMedical(),
       hotel: emptyHotel(),
@@ -54,23 +57,30 @@ export default function NewPet() {
 
   return (
     <Screen>
-      <Field label="Кличка *" value={name} onChangeText={setName} />
-      <Segmented value={species} onChange={setSpecies} options={SPECIES.map((s) => ({ value: s, label: SPECIES_LABEL[s] }))} />
+      <Field label={t('pet.nameReq')} value={name} onChangeText={setName} />
+      <Segmented value={species} onChange={setSpecies} options={SPECIES.map((s) => ({ value: s, label: t(`species.${s}`) }))} />
       <Segmented
         value={sex}
         onChange={setSex}
         options={[
-          { value: 'male', label: 'Мальчик' },
-          { value: 'female', label: 'Девочка' },
+          { value: 'male', label: t('pet.male') },
+          { value: 'female', label: t('pet.female') },
         ]}
       />
-      <Field label="Порода" value={breed} onChangeText={setBreed} />
-      <Field label="Дата рождения (ГГГГ-ММ-ДД)" value={birthDate} onChangeText={setBirthDate} placeholder="2021-05-14" />
-      <Field label="Окрас" value={color} onChangeText={setColor} />
-      <Field label="Вес, кг" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
-      <Field label="Номер чипа" value={chipNumber} onChangeText={setChipNumber} keyboardType="number-pad" />
-      <Field label="Особые приметы" value={specialMarks} onChangeText={setSpecialMarks} multiline />
-      <Button title="Сохранить" icon="checkmark" onPress={save} />
+      <Field label={t('pet.breed')} value={breed} onChangeText={setBreed} />
+      <Field
+        label={t('pet.birthDateLabel')}
+        value={birthDate}
+        onChangeText={setBirthDate}
+        placeholder={t('common.datePh')}
+        keyboardType="numbers-and-punctuation"
+      />
+      <Field label={t('pet.color')} value={color} onChangeText={setColor} />
+      <Field label={t('pet.weight')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
+      <Field label={t('pet.chip')} value={chipNumber} onChangeText={setChipNumber} keyboardType="number-pad" />
+      {species === 'dog' && <Field label={t('pet.license')} value={licenseNumber} onChangeText={setLicenseNumber} />}
+      <Field label={t('pet.marks')} value={specialMarks} onChangeText={setSpecialMarks} multiline />
+      <Button title={t('common.save')} icon="checkmark" onPress={save} />
     </Screen>
   );
 }

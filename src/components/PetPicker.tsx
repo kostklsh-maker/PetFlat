@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text } from 'react-native';
 import type { Pet } from '../data/types';
+import { useT } from '../i18n';
 import { useStore } from '../store/AppStore';
 import { colors, spacing } from './theme';
 import { Button, Card, Muted } from './ui';
@@ -17,11 +18,12 @@ export function useSelectedPet(): [Pet | undefined, (id: string) => void] {
 
 export function PetPicker({ value, onChange }: { value?: Pet; onChange: (id: string) => void }) {
   const { state } = useStore();
+  const { t } = useT();
   if (state.pets.length === 0) {
     return (
       <Card>
-        <Muted>Сначала добавьте питомца.</Muted>
-        <Button title="Добавить питомца" icon="add" onPress={() => router.push('/pet/new')} />
+        <Muted>{t('common.addPetFirst')}</Muted>
+        <Button title={t('common.addPet')} icon="add" onPress={() => router.push('/pet/new')} />
       </Card>
     );
   }

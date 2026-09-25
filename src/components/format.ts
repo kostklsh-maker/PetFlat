@@ -1,40 +1,41 @@
-const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-
-/** "2026-09-25" -> "25 сен 2026". Returns the input unchanged if it is not an ISO date. */
-export function formatDate(iso?: string): string {
-  if (!iso) return '';
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!m) return iso;
-  return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}`;
-}
+/** Dates are stored as ISO "YYYY-MM-DD"; users type them the Israeli way, DD/MM/YYYY. */
 
 export function isIsoDate(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+}
+
+/** Accepts DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY (day and month may be one digit) or ISO. Returns ISO or null. */
+export function parseDateInput(input: string): string | null {
+  const s = input.trim();
+  if (isIsoDate(s)) return s;
+  const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(s);
+  if (!m) return null;
+  const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return isIsoDate(iso) ? iso : null;
+}
+
+/** ISO → DD/MM/YYYY for prefilling inputs. */
+export function toInputDate(iso?: string): string {
+  if (!iso || !isIsoDate(iso)) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export function ageLabel(birthIso: string): string {
-  if (!isIsoDate(birthIso)) return '';
-  const b = new Date(birthIso);
   const now = new Date();
-  let months = (now.getFullYear() - b.getFullYear()) * 12 + now.getMonth() - b.getMonth();
-  if (now.getDate() < b.getDate()) months--;
-  if (months < 0) return '';
-  if (months < 12) return `${months} мес.`;
-  const y = Math.floor(months / 12);
-  const word = y % 10 === 1 && y % 100 !== 11 ? 'год' : [2, 3, 4].includes(y % 10) && ![12, 13, 14].includes(y % 100) ? 'года' : 'лет';
-  return `${y} ${word}`;
-}
-
-export function rub(n: number): string {
-  return n === 0 ? 'Бесплатно' : `${n.toLocaleString('ru-RU')} ₽`;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 /** Days from today until the given date (negative when overdue). */
 export function daysUntil(iso: string): number {
-  const ms = Date.parse(iso) - Date.parse(todayIso());
-  return Math.round(ms / 86_400_000);
+  return Math.round((Date.parse(iso) - Date.parse(todayIso())) / 86_400_000);
+}
+
+/** 0 = Sunday … 6 = Saturday. */
+export function weekday(iso: string): number {
+  return new Date(iso + 'T00:00:00Z').getUTCDay();
 }

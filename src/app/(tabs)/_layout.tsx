@@ -3,6 +3,7 @@ import type { ColorValue } from 'react-native';
 import { Tabs } from 'expo-router/js-tabs';
 import { colors } from '../../components/theme';
 import type { IconName } from '../../data/catalog';
+import { useT } from '../../i18n';
 
 function icon(name: IconName) {
   return function TabIcon({ color, size }: { color: ColorValue; size: number }) {
@@ -11,6 +12,7 @@ function icon(name: IconName) {
 }
 
 export default function TabsLayout() {
+  const { t } = useT();
   return (
     <Tabs
       screenOptions={{
@@ -19,11 +21,11 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Главная', tabBarIcon: icon('home') }} />
-      <Tabs.Screen name="pets" options={{ title: 'Питомцы', tabBarIcon: icon('paw') }} />
-      <Tabs.Screen name="services" options={{ title: 'Сервисы', tabBarIcon: icon('apps') }} />
-      <Tabs.Screen name="findypet" options={{ title: 'FindYpet', tabBarIcon: icon('search') }} />
-      <Tabs.Screen name="profile" options={{ title: 'Профиль', tabBarIcon: icon('person-circle') }} />
+      <Tabs.Screen name="index" options={{ title: t('tab.home'), tabBarIcon: icon('home') }} />
+      <Tabs.Screen name="pets" options={{ title: t('tab.pets'), tabBarIcon: icon('paw') }} />
+      <Tabs.Screen name="services" options={{ title: t('tab.services'), tabBarIcon: icon('apps') }} />
+      <Tabs.Screen name="findypet" options={{ title: t('tab.findypet'), tabBarIcon: icon('search') }} />
+      <Tabs.Screen name="profile" options={{ title: t('tab.profile'), tabBarIcon: icon('person-circle') }} />
     </Tabs>
   );
 }

@@ -1,22 +1,25 @@
-import { goBack } from '../../components/nav';
 import { useLocalSearchParams } from 'expo-router';
 import { Alert, Linking, Share } from 'react-native';
-import { formatDate, rub } from '../../components/format';
+import { goBack } from '../../components/nav';
 import { colors } from '../../components/theme';
 import { Button, Card, Empty, H1, IconBadge, KeyValue, Muted, Screen, Tag } from '../../components/ui';
-import { SPECIES_LABEL } from '../../data/catalog';
+import { useT } from '../../i18n';
 import { useStore } from '../../store/AppStore';
 
 export default function PostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, resolvePost } = useStore();
+  const { t, money, date } = useT();
   const post = state.posts.find((p) => p.id === id);
 
-  if (!post) return <Empty icon="search" text="Объявление не найдено" />;
+  if (!post) return <Empty icon="search" text={t('fyp.notFound')} />;
 
   const lost = post.kind === 'lost';
   const mine = !!post.ownPetId;
-  const title = lost ? `Потерялся: ${post.petName || SPECIES_LABEL[post.species]}` : `Найден: ${SPECIES_LABEL[post.species]}`;
+  const speciesLabel = t(`species.${post.species}`);
+  const title = lost
+    ? t('fyp.lostTitle', { name: post.petName || speciesLabel })
+    : t('fyp.foundTitle', { species: speciesLabel });
 
   const call = () => Linking.openURL(`tel:${post.contactPhone.replace(/[^\d+]/g, '')}`);
 
@@ -26,19 +29,19 @@ export default function PostScreen() {
         `FindYpet — ${title}`,
         `${post.breed}, ${post.color}`,
         post.description,
-        `Где: ${post.area}, ${formatDate(post.date)}`,
-        post.reward ? `Вознаграждение: ${rub(post.reward)}` : '',
-        `Связь: ${post.contactName} ${post.contactPhone}`,
+        t('fyp.whereLine', { area: post.area, date: date(post.date) }),
+        post.reward ? t('fyp.rewardLine', { amount: money(post.reward) }) : '',
+        t('fyp.contactLine', { name: post.contactName, phone: post.contactPhone }),
       ]
         .filter(Boolean)
         .join('\n'),
     });
 
   const resolve = () =>
-    Alert.alert('Питомец нашёлся?', 'Объявление будет снято с публикации.', [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert(t('fyp.resolveTitle'), t('fyp.resolveMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Да, нашёлся!',
+        text: t('fyp.resolveYes'),
         onPress: () => {
           resolvePost(post.id);
           goBack();
@@ -51,23 +54,23 @@ export default function PostScreen() {
       <Card style={{ alignItems: 'center' }}>
         <IconBadge icon={lost ? 'alert-circle' : 'heart'} color={lost ? colors.accent : colors.success} size={72} />
         <H1>{title}</H1>
-        {post.reward ? <Tag text={`Вознаграждение ${rub(post.reward)}`} color={colors.accent} /> : null}
+        {post.reward ? <Tag text={t('fyp.rewardTag', { amount: money(post.reward) })} color={colors.accent} /> : null}
       </Card>
       <Card>
-        <KeyValue k="Вид" v={SPECIES_LABEL[post.species]} />
-        <KeyValue k="Порода" v={post.breed} />
-        <KeyValue k="Окрас" v={post.color} />
-        <KeyValue k={lost ? 'Где потерялся' : 'Где найден'} v={post.area} />
-        <KeyValue k="Дата" v={formatDate(post.date)} />
-        <KeyValue k="Контакт" v={post.contactName} />
+        <KeyValue k={t('fyp.species')} v={speciesLabel} />
+        <KeyValue k={t('pet.breed')} v={post.breed} />
+        <KeyValue k={t('pet.color')} v={post.color} />
+        <KeyValue k={lost ? t('fyp.whereLost') : t('fyp.whereFound')} v={post.area} />
+        <KeyValue k={t('common.date')} v={date(post.date)} />
+        <KeyValue k={t('fyp.contact')} v={post.contactName} />
         {post.description ? <Muted>{post.description}</Muted> : null}
       </Card>
       {mine ? (
-        <Button title="Питомец нашёлся" icon="checkmark-circle" onPress={resolve} />
+        <Button title={t('fyp.resolved')} icon="checkmark-circle" onPress={resolve} />
       ) : (
-        <Button title={lost ? 'Я видел этого питомца' : 'Это мой питомец'} icon="call" onPress={call} />
+        <Button title={lost ? t('fyp.sawIt') : t('fyp.itsMine')} icon="call" onPress={call} />
       )}
-      <Button title="Поделиться объявлением" variant="secondary" icon="share-social" onPress={share} />
+      <Button title={t('fyp.sharePost')} variant="secondary" icon="share-social" onPress={share} />
     </Screen>
   );
 }

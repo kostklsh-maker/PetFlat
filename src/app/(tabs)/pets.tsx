@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
-import { ageLabel } from '../../components/format';
 import { Button, Empty, ListItem, Muted, Screen } from '../../components/ui';
-import { SPECIES_ICON, SPECIES_LABEL, planById } from '../../data/catalog';
+import { SPECIES_ICON, planById } from '../../data/catalog';
+import { useT } from '../../i18n';
 import { useStore } from '../../store/AppStore';
 
 export default function Pets() {
   const { state, canAddPet } = useStore();
+  const { t, tr, age, join } = useT();
   const plan = planById(state.plan);
 
   const add = () => {
@@ -14,27 +15,27 @@ export default function Pets() {
       router.push('/pet/new');
       return;
     }
-    Alert.alert('Лимит питомцев', `Тариф «${plan.title}» позволяет добавить до ${plan.maxPets} питомц(а/ев).`, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Сменить тариф', onPress: () => router.push('/plans') },
+    Alert.alert(t('pets.limitTitle'), t('pets.limitMsg', { plan: tr(plan.title), max: plan.maxPets }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('pets.changePlan'), onPress: () => router.push('/plans') },
     ]);
   };
 
   return (
     <Screen>
-      {state.pets.length === 0 && <Empty icon="paw" text="Пока нет питомцев" />}
+      {state.pets.length === 0 && <Empty icon="paw" text={t('pets.empty')} />}
       {state.pets.map((p) => (
         <ListItem
           key={p.id}
           icon={SPECIES_ICON[p.species]}
           title={p.name}
-          subtitle={[SPECIES_LABEL[p.species], p.breed, ageLabel(p.birthDate)].filter(Boolean).join(' · ')}
+          subtitle={join([t(`species.${p.species}`), p.breed, age(p.birthDate)])}
           onPress={() => router.push(`/pet/${p.id}`)}
         />
       ))}
-      <Button title="Добавить питомца" icon="add" onPress={add} />
+      <Button title={t('common.addPet')} icon="add" onPress={add} />
       <Muted style={{ textAlign: 'center' }}>
-        {state.pets.length} из {plan.maxPets} по тарифу «{plan.title}»
+        {t('pets.countOf', { n: state.pets.length, max: plan.maxPets, plan: tr(plan.title) })}
       </Muted>
     </Screen>
   );

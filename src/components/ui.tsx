@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,10 +10,23 @@ import {
   View,
   type StyleProp,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 import type { IconName } from '../data/catalog';
+import { LANGS, useT } from '../i18n';
+import { useStore } from '../store/AppStore';
 import { colors, radius, spacing } from './theme';
+
+const MIRRORED: Partial<Record<IconName, IconName>> = {
+  'arrow-forward': 'arrow-back',
+  'chevron-forward': 'chevron-back',
+};
+
+/** Arrow icons point the other way in right-to-left layouts. */
+export function directional(icon: IconName, rtl: boolean): IconName {
+  return (rtl && MIRRORED[icon]) || icon;
+}
 
 export function Screen({ children, padded = true }: { children: ReactNode; padded?: boolean }) {
   return (
@@ -45,7 +59,7 @@ export function H2({ children }: { children: ReactNode }) {
   return <Text style={styles.h2}>{children}</Text>;
 }
 
-export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<any> }) {
+export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text style={[styles.muted, style]}>{children}</Text>;
 }
 
@@ -62,6 +76,7 @@ export function Button({
   icon?: IconName;
   disabled?: boolean;
 }) {
+  const { rtl } = useT();
   const bg = { primary: colors.primary, secondary: '#E8F0FF', danger: '#FDECEC', ghost: 'transparent' }[variant];
   const fg = { primary: '#fff', secondary: colors.primaryDark, danger: colors.danger, ghost: colors.primary }[variant];
   return (
@@ -73,20 +88,26 @@ export function Button({
         { backgroundColor: bg, opacity: disabled ? 0.5 : pressed ? 0.8 : 1 },
       ]}
     >
-      {icon && <Ionicons name={icon} size={18} color={fg} />}
+      {icon && <Ionicons name={directional(icon, rtl)} size={18} color={fg} />}
       <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>
     </Pressable>
   );
 }
 
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
+  const { rtl } = useT();
   return (
     <View style={{ gap: spacing(1) }}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         placeholderTextColor="#9CA3AF"
         {...props}
-        style={[styles.input, props.multiline && { minHeight: 80, textAlignVertical: 'top' }]}
+        style={[
+          styles.input,
+          props.multiline && { minHeight: 80, textAlignVertical: 'top' },
+          // Native inputs follow the RTL layout on their own; the browser needs an explicit alignment.
+          Platform.OS === 'web' && rtl && { textAlign: 'right' },
+        ]}
       />
     </View>
   );
@@ -155,6 +176,7 @@ export function ListItem({
   right?: ReactNode;
   onPress?: () => void;
 }) {
+  const { rtl } = useT();
   return (
     <Card onPress={onPress}>
       <Row>
@@ -163,7 +185,7 @@ export function ListItem({
           <Text style={styles.itemTitle}>{title}</Text>
           {subtitle ? <Muted>{subtitle}</Muted> : null}
         </View>
-        {right ?? (onPress ? <Ionicons name="chevron-forward" size={20} color={colors.muted} /> : null)}
+        {right ?? (onPress ? <Ionicons name={rtl ? 'chevron-back' : 'chevron-forward'} size={20} color={colors.muted} /> : null)}
       </Row>
     </Card>
   );
@@ -182,7 +204,7 @@ export function KeyValue({ k, v }: { k: string; v?: string | number }) {
   return (
     <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <Muted>{k}</Muted>
-      <Text style={{ color: colors.text, flexShrink: 1, textAlign: 'right' }}>{String(v)}</Text>
+      <Text style={{ color: colors.text, flexShrink: 1 }}>{String(v)}</Text>
     </Row>
   );
 }
@@ -202,11 +224,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing(4),
     gap: spacing(2),
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
   },
   h1: { fontSize: 24, fontWeight: '700', color: colors.text },
   h2: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: spacing(2) },
@@ -237,3 +255,15 @@ const styles = StyleSheet.create({
   segmentItem: { flex: 1, paddingVertical: spacing(2), borderRadius: radius.sm, alignItems: 'center' },
   segmentText: { color: colors.muted, fontSize: 14 },
 });
+
+/** Language switcher; changing to/from Hebrew restarts the app on iOS/Android to flip the layout. */
+export function LanguagePicker() {
+  const { state, setLang } = useStore();
+  return (
+    <Segmented
+      value={state.lang}
+      onChange={(lang) => void setLang(lang)}
+      options={LANGS.map((l) => ({ value: l.id, label: l.label }))}
+    />
+  );
+}

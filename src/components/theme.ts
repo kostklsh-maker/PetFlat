@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const colors = {
   primary: '#3A86FF',
   primaryDark: '#1D4ED8',
@@ -14,3 +16,6 @@ export const colors = {
 export const spacing = (n: number) => n * 4;
 
 export const radius = { sm: 8, md: 12, lg: 18 };
+
+/** iOS has no generic "monospace" family. */
+export const monoFont = Platform.select({ ios: 'Menlo', default: 'monospace' });

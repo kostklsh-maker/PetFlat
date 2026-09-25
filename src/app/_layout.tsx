@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../components/theme';
+import { serviceById } from '../data/catalog';
+import { useT } from '../i18n';
 import { AppStoreProvider, useStore } from '../store/AppStore';
 
 // Deep-linked screens (e.g. a FindYpet post from a notification) get the tabs underneath, so "back" works.
@@ -10,6 +12,8 @@ export const unstable_settings = { anchor: '(tabs)' };
 
 function RootStack() {
   const { ready, state } = useStore();
+  const { t, tr } = useT();
+  const serviceTitle = (id: Parameters<typeof serviceById>[0]) => ({ title: tr(serviceById(id).title) });
 
   if (!ready) {
     return (
@@ -33,15 +37,15 @@ function RootStack() {
       </Stack.Protected>
       <Stack.Protected guard={state.onboarded}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="plans" options={{ title: 'Тарифы', presentation: 'modal' }} />
-        <Stack.Screen name="pet/new" options={{ title: 'Новый питомец', presentation: 'modal' }} />
-        <Stack.Screen name="pet/[id]" options={{ title: 'Питомец' }} />
-        <Stack.Screen name="service/medical" options={{ title: 'Больничная карта' }} />
-        <Stack.Screen name="service/club" options={{ title: 'Клубная карта' }} />
-        <Stack.Screen name="service/hotel" options={{ title: 'Карта для гостиниц' }} />
-        <Stack.Screen name="service/grooming" options={{ title: 'Грумеры' }} />
-        <Stack.Screen name="findypet/new" options={{ title: 'Новое объявление', presentation: 'modal' }} />
-        <Stack.Screen name="findypet/[id]" options={{ title: 'Объявление' }} />
+        <Stack.Screen name="plans" options={{ title: t('title.plans'), presentation: 'modal' }} />
+        <Stack.Screen name="pet/new" options={{ title: t('title.newPet'), presentation: 'modal' }} />
+        <Stack.Screen name="pet/[id]" options={{ title: t('title.pet') }} />
+        <Stack.Screen name="service/medical" options={serviceTitle('medical')} />
+        <Stack.Screen name="service/club" options={serviceTitle('club')} />
+        <Stack.Screen name="service/hotel" options={serviceTitle('hotel')} />
+        <Stack.Screen name="service/grooming" options={serviceTitle('grooming')} />
+        <Stack.Screen name="findypet/new" options={{ title: t('title.newPost'), presentation: 'modal' }} />
+        <Stack.Screen name="findypet/[id]" options={{ title: t('title.post') }} />
       </Stack.Protected>
     </Stack>
   );

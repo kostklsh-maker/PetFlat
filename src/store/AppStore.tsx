@@ -13,8 +13,10 @@ import type {
   PlanId,
   ServiceId,
 } from '../data/types';
+import { applyDirection } from '../i18n/direction';
+import type { Lang } from '../i18n/types';
 
-const STORAGE_KEY = 'petflat/state/v1';
+const STORAGE_KEY = 'petflat/state/v2';
 
 export const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
@@ -26,6 +28,7 @@ interface Store {
   ready: boolean;
   hasService: (id: ServiceId) => boolean;
   canAddPet: boolean;
+  setLang: (lang: Lang) => Promise<void>;
   completeOnboarding: (owner: Owner) => void;
   updateOwner: (owner: Owner) => void;
   setPlan: (plan: PlanId) => void;
@@ -48,12 +51,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setState({ ...initialState, ...JSON.parse(raw) });
-      })
-      .catch(() => {})
-      .finally(() => setReady(true));
+    (async () => {
+      let loaded = initialState();
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        if (raw) loaded = { ...loaded, ...JSON.parse(raw) };
+      } catch {}
+      setState(loaded);
+      // May reload the app (iOS/Android) when the saved language needs the other layout direction.
+      await applyDirection(loaded.lang).catch(() => {});
+      setReady(true);
+    })();
   }, []);
 
   useEffect(() => {
@@ -71,15 +79,21 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       ready,
       hasService: (id) => plan.services.includes(id),
       canAddPet: state.pets.length < plan.maxPets,
+      setLang: async (lang) => {
+        const next = { ...state, lang };
+        setState(next);
+        // Persist before a possible reload so the new language survives it.
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+        await applyDirection(lang).catch(() => {});
+      },
       completeOnboarding: (owner) => setState((s) => ({ ...s, owner, onboarded: true })),
       updateOwner: (owner) => setState((s) => ({ ...s, owner })),
       setPlan: (id) =>
         setState((s) => ({
           ...s,
           plan: id,
-          club: planById(id).services.includes('club') && !s.club.number
-            ? { ...s.club, number: clubNumber() }
-            : s.club,
+          club:
+            planById(id).services.includes('club') && !s.club.number ? { ...s.club, number: clubNumber() } : s.club,
         })),
       addPet: (pet) => {
         const id = newId();
@@ -100,7 +114,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       addPost: (p) => setState((s) => ({ ...s, posts: [{ ...p, id: newId() }, ...s.posts] })),
       resolvePost: (id) =>
         setState((s) => ({ ...s, posts: s.posts.map((p) => (p.id === id ? { ...p, resolved: true } : p)) })),
-      resetAll: () => setState(initialState),
+      // Keep the chosen language after wiping the profile.
+      resetAll: () => setState((s) => ({ ...initialState(), lang: s.lang })),
     };
   }, [state, ready, mapPet]);
 

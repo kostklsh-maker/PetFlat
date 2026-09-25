@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../components/theme';
-import { Button, Field, Muted, Screen } from '../components/ui';
+import { Button, Field, LanguagePicker, Muted, Screen } from '../components/ui';
+import { useT } from '../i18n';
 import { useStore } from '../store/AppStore';
 
 export default function Welcome() {
   const { completeOnboarding } = useStore();
+  const { t } = useT();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -15,7 +17,7 @@ export default function Welcome() {
 
   const submit = () => {
     if (!name.trim() || !phone.trim()) {
-      Alert.alert('Заполните профиль', 'Укажите имя и телефон — по ним с вами свяжутся, если питомец потеряется.');
+      Alert.alert(t('welcome.fillTitle'), t('welcome.fillMsg'));
       return;
     }
     completeOnboarding({ name: name.trim(), phone: phone.trim(), email: email.trim(), city: city.trim() });
@@ -25,6 +27,7 @@ export default function Welcome() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Screen>
+          <LanguagePicker />
           <View style={{ alignItems: 'center', gap: spacing(2), marginVertical: spacing(6) }}>
             <View
               style={{
@@ -39,16 +42,13 @@ export default function Welcome() {
               <Ionicons name="paw" size={48} color="#fff" />
             </View>
             <Text style={{ fontSize: 32, fontWeight: '800', color: colors.text }}>PetFlat</Text>
-            <Muted style={{ textAlign: 'center' }}>
-              Единый цифровой профиль владельца: медкарта, клубные карты, грумеры, гостиницы и поиск питомцев
-              FindYpet — в одном приложении.
-            </Muted>
+            <Muted style={{ textAlign: 'center' }}>{t('welcome.tagline')}</Muted>
           </View>
-          <Field label="Имя *" value={name} onChangeText={setName} placeholder="Как к вам обращаться" />
-          <Field label="Телефон *" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="+7 ..." />
-          <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-          <Field label="Город" value={city} onChangeText={setCity} />
-          <Button title="Создать профиль" icon="arrow-forward" onPress={submit} />
+          <Field label={t('welcome.name')} value={name} onChangeText={setName} placeholder={t('welcome.namePh')} />
+          <Field label={t('welcome.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="+972 5X-XXX-XXXX" />
+          <Field label={t('owner.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <Field label={t('owner.city')} value={city} onChangeText={setCity} placeholder={t('owner.cityPh')} />
+          <Button title={t('welcome.create')} icon="arrow-forward" onPress={submit} />
         </Screen>
       </KeyboardAvoidingView>
     </SafeAreaView>

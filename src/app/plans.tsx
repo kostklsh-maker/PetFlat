@@ -1,28 +1,29 @@
-import { goBack } from '../components/nav';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Alert, Text, View } from 'react-native';
-import { rub } from '../components/format';
+import { goBack } from '../components/nav';
 import { colors } from '../components/theme';
 import { Button, Card, H1, Muted, Row, Screen, Tag } from '../components/ui';
 import { PLANS, type Plan } from '../data/catalog';
+import { useT } from '../i18n';
 import { useStore } from '../store/AppStore';
 
 export default function Plans() {
   const { state, setPlan } = useStore();
+  const { t, tr, price } = useT();
 
   const choose = (plan: Plan) => {
     if (state.pets.length > plan.maxPets) {
-      Alert.alert('Слишком много питомцев', `В тарифе «${plan.title}» можно держать до ${plan.maxPets} питомц(а/ев).`);
+      Alert.alert(t('plans.tooManyTitle'), t('plans.tooManyMsg', { plan: tr(plan.title), max: plan.maxPets }));
       return;
     }
-    // TODO: connect real billing (App Store / Google Play subscriptions or a payment provider) before release.
+    // TODO: connect real billing (App Store / Google Play subscriptions or an Israeli payment provider) before release.
     Alert.alert(
-      `Тариф «${plan.title}»`,
-      plan.pricePerMonth ? `Оформить подписку за ${rub(plan.pricePerMonth)} в месяц?` : 'Перейти на бесплатный тариф?',
+      t('plans.planTitle', { plan: tr(plan.title) }),
+      plan.pricePerMonth ? t('plans.confirmPaid', { price: price(plan.pricePerMonth) }) : t('plans.confirmFree'),
       [
-        { text: 'Отмена', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Подтвердить',
+          text: t('common.confirm'),
           onPress: () => {
             setPlan(plan.id);
             goBack();
@@ -34,30 +35,31 @@ export default function Plans() {
 
   return (
     <Screen>
-      <Muted>Выберите тариф — сервисы подключатся к вашему профилю сразу после оплаты.</Muted>
+      <Muted>{t('plans.intro')}</Muted>
       {PLANS.map((plan) => {
         const current = plan.id === state.plan;
         return (
           <Card key={plan.id} style={current && { borderWidth: 2, borderColor: colors.primary }}>
             <Row style={{ justifyContent: 'space-between' }}>
-              <H1>{plan.title}</H1>
-              {current && <Tag text="Текущий" />}
+              <H1>{tr(plan.title)}</H1>
+              {current && <Tag text={t('plans.current')} />}
             </Row>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.primary }}>
-              {plan.pricePerMonth ? `${rub(plan.pricePerMonth)} / мес` : 'Бесплатно'}
+              {plan.pricePerMonth ? t('common.perMonth', { price: price(plan.pricePerMonth) }) : t('common.free')}
             </Text>
             <View style={{ gap: 6 }}>
               {plan.perks.map((perk) => (
-                <Row key={perk} style={{ gap: 8 }}>
+                <Row key={perk.en} style={{ gap: 8 }}>
                   <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                  <Text style={{ color: colors.text, flex: 1 }}>{perk}</Text>
+                  <Text style={{ color: colors.text, flex: 1 }}>{tr(perk)}</Text>
                 </Row>
               ))}
             </View>
-            {!current && <Button title="Выбрать" onPress={() => choose(plan)} />}
+            {!current && <Button title={t('plans.choose')} onPress={() => choose(plan)} />}
           </Card>
         );
       })}
+      <Muted style={{ textAlign: 'center' }}>{t('plans.vat')}</Muted>
     </Screen>
   );
 }

@@ -1,8 +1,9 @@
 import { Text, View } from 'react-native';
 import { PlanGate } from '../../components/PlanGate';
-import { colors, radius, spacing } from '../../components/theme';
+import { colors, monoFont, radius, spacing } from '../../components/theme';
 import { H2, ListItem, Muted, Row, Screen, Tag } from '../../components/ui';
-import { PARTNER_SHOPS } from '../../data/catalog';
+import { PARTNER_SHOPS, PREMIUM_CASHBACK_BONUS } from '../../data/catalog';
+import { useT } from '../../i18n';
 import { useStore } from '../../store/AppStore';
 
 export default function ClubScreen() {
@@ -15,8 +16,9 @@ export default function ClubScreen() {
 
 function Club() {
   const { state } = useStore();
+  const { t, tr, num } = useT();
   const { club, owner } = state;
-  const bonus = state.plan === 'premium' ? 2 : 0;
+  const bonus = state.plan === 'premium' ? PREMIUM_CASHBACK_BONUS : 0;
 
   return (
     <Screen>
@@ -32,27 +34,30 @@ function Club() {
       >
         <Row style={{ justifyContent: 'space-between' }}>
           <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }}>PetFlat Club</Text>
-          <Tag text={club.level} color="#FFFFFF" />
+          <Tag text={t(`club.level.${club.level}`)} color="#FFFFFF" />
         </Row>
         <View>
-          <Text style={{ color: '#fff', opacity: 0.8 }}>Баллы</Text>
-          <Text style={{ color: '#fff', fontSize: 32, fontWeight: '800' }}>{club.points.toLocaleString('ru-RU')}</Text>
+          <Text style={{ color: '#fff', opacity: 0.8 }}>{t('club.points')}</Text>
+          <Text style={{ color: '#fff', fontSize: 32, fontWeight: '800' }}>{num(club.points)}</Text>
         </View>
         <Row style={{ justifyContent: 'space-between' }}>
-          <Text style={{ color: '#fff', fontSize: 18, letterSpacing: 2, fontFamily: 'monospace' }}>{club.number}</Text>
+          {/* Card numbers read left-to-right in every language. */}
+          <Text style={{ color: '#fff', fontSize: 18, letterSpacing: 2, fontFamily: monoFont, writingDirection: 'ltr' }}>
+            {club.number}
+          </Text>
           <Text style={{ color: '#fff', opacity: 0.9 }}>{owner.name}</Text>
         </Row>
       </View>
-      <Muted style={{ textAlign: 'center' }}>Покажите карту на кассе магазина-партнёра, чтобы получить кешбэк баллами.</Muted>
+      <Muted style={{ textAlign: 'center' }}>{t('club.hint')}</Muted>
 
-      <H2>Магазины-партнёры</H2>
+      <H2>{t('club.partners')}</H2>
       {PARTNER_SHOPS.map((s) => (
         <ListItem
           key={s.id}
           icon="storefront"
           color="#6C5CE7"
-          title={s.name}
-          subtitle={s.address}
+          title={tr(s.name)}
+          subtitle={tr(s.address)}
           right={<Tag text={`${s.cashbackPercent + bonus}%`} color={colors.success} />}
         />
       ))}

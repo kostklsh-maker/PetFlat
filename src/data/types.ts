@@ -1,3 +1,5 @@
+import type { Lang } from '../i18n/types';
+
 export type Species = 'dog' | 'cat' | 'bird' | 'rodent' | 'other';
 
 export type PlanId = 'basic' | 'standard' | 'premium';
@@ -51,6 +53,8 @@ export interface Pet {
   color: string;
   weightKg?: number;
   chipNumber?: string;
+  /** Municipal dog license (רישיון להחזקת כלב), required for dogs in Israel. */
+  licenseNumber?: string;
   specialMarks?: string;
   medical: MedicalCard;
   hotel: HotelCard;
@@ -59,14 +63,14 @@ export interface Pet {
 export interface ClubCard {
   number: string;
   points: number;
-  level: 'Бронза' | 'Серебро' | 'Золото';
+  level: 'bronze' | 'silver' | 'gold';
 }
 
 export interface GroomingBooking {
   id: string;
   petId: string;
   salonId: string;
-  service: string;
+  serviceId: string;
   date: string;
   time: string;
 }
@@ -92,6 +96,7 @@ export interface LostFoundPost {
 
 export interface AppState {
   onboarded: boolean;
+  lang: Lang;
   owner: Owner;
   plan: PlanId;
   pets: Pet[];
